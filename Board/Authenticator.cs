@@ -305,6 +305,7 @@ namespace TavernEssentials.Board
                 + "\"is_member\":\"True\","
                 + "\"is_dev\":\"True\","
                 + "\"TavernToken\":" + JsonString(tavernToken) + ","
+                + "\"TavernMods\":" + JsonString(ModsClaim.Read()) + ","
                 + "\"exp\":9999999999,"
                 + "\"iss\":\"AltaWebAPI\","
                 + "\"aud\":\"AltaClient\""
