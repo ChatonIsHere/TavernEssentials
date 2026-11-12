@@ -34,7 +34,9 @@ namespace TavernEssentials.Board
 
         internal static string Reason(JoinResult r)
         {
-            if (r == null || r.WasSuccessful || r.Result != ClientJoinResult.JoinAccepted) return null;
+            if (r == null || r.WasSuccessful) return null;
+            // TavernLib marks a mods refusal JoinRejected, so the game doesn't retry it.
+            if (r.Result != ClientJoinResult.JoinAccepted && r.Result != ClientJoinResult.JoinRejected) return null;
             return Refusals.Clean(r.Message);
         }
 
