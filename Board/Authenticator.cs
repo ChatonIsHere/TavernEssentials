@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using Alta.Api.DataTransferModels.Models.Responses;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace TavernEssentials.Board
@@ -59,7 +60,10 @@ namespace TavernEssentials.Board
             JObject resp;
             try
             {
-                resp = Handshake(ip, username, token);
+                JObject join = new JObject();
+                join["username"] = username;
+                join["token"] = token;
+                resp = Send(ip, join);
             }
             catch (Exception e)
             {
@@ -73,6 +77,7 @@ namespace TavernEssentials.Board
                 ulong userId = 0;
                 if (resp["user_id"] != null) userId = (ulong)resp["user_id"];
                 res.Scene = ReadScene(resp);
+                SendMods(ip, username, token);
                 res.Ok = true;
                 res.Jwt = Jwt.MintIdentity(userId, username, token);
                 return res;
@@ -116,7 +121,31 @@ namespace TavernEssentials.Board
             }
         }
 
-        static JObject Handshake(string ip, string username, string token)
+        // After the handshake, which clears the last join's list. The join token can't carry it: the game's join
+        // message is too small. A failure only warns; a server that requires mods then refuses the join.
+        static void SendMods(string ip, string username, string token)
+        {
+            string mods = ModList.Read();
+            if (mods == null) return;
+            try
+            {
+                JObject payload = new JObject();
+                payload["set_mods"] = true;
+                payload["username"] = username;
+                payload["token"] = token;
+                // No date parsing, so a version goes as it is.
+                payload["mods"] = JObject.Load(new JsonTextReader(new StringReader(mods)) { DateParseHandling = DateParseHandling.None });
+                JObject resp = Send(ip, payload);
+                if ((string)resp["status"] != "ok")
+                    Log.Warn("join: the server didn't take your mod list (" + (string)resp["message"] + ").");
+            }
+            catch (Exception e)
+            {
+                Log.Warn("join: could not send your mod list to the server (" + e.Message + ").");
+            }
+        }
+
+        static JObject Send(string ip, JObject payload)
         {
             using (TcpClient client = new TcpClient())
             {
@@ -127,9 +156,6 @@ namespace TavernEssentials.Board
                 client.ReceiveTimeout = TimeoutMs;
                 client.SendTimeout = TimeoutMs;
 
-                JObject payload = new JObject();
-                payload["username"] = username;
-                payload["token"] = token;
                 byte[] outb = Encoding.UTF8.GetBytes(payload.ToString(Newtonsoft.Json.Formatting.None));
 
                 NetworkStream s = client.GetStream();
@@ -305,7 +331,6 @@ namespace TavernEssentials.Board
                 + "\"is_member\":\"True\","
                 + "\"is_dev\":\"True\","
                 + "\"TavernToken\":" + JsonString(tavernToken) + ","
-                + "\"TavernMods\":" + JsonString(ModsClaim.Read()) + ","
                 + "\"exp\":9999999999,"
                 + "\"iss\":\"AltaWebAPI\","
                 + "\"aud\":\"AltaClient\""
