@@ -3,7 +3,7 @@
 What a modded *A Township Tale* server and its players need to get back to normal, in one
 DLL, with nothing hosted.
 
-**Status: 0.14.0.** Nine features, each with its own switch:
+**Status: 0.14.1.** Nine features, each with its own switch:
 
 - **Social**: cross-server friends. Every player gets a key, the game's own friend card works
   again, and on any server running TavernEssentials friends see each other's names in green,
